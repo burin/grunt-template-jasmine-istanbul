@@ -7,11 +7,23 @@
 var path = require('path');
 var istanbul = require('istanbul');
 
-var REPORTER = __dirname + '/reporter.js';
+var REPORTER = './node_modules/grunt-template-jasmine-istanbul/src/main/js/reporter.js';
 var DEFAULT_TEMPLATE = 'node_modules/grunt-contrib-jasmine/tasks/jasmine/'
 		+ 'templates/DefaultRunner.tmpl';
 
 exports.process = function (grunt, task, context) {
+	var getRelativeFileList = function () {
+
+		var list = Array.prototype.slice.call(arguments);
+		var base = path.resolve('.');
+		var files = [];
+		list.forEach(function(listItem){
+			if (listItem) files = files.concat(grunt.file.expand({nonull: true},listItem));
+		});
+		return files;
+	};
+
+
 	// prepare reports
 	var reports = [];
 	if (typeof context.options.report == 'string'
@@ -33,13 +45,16 @@ exports.process = function (grunt, task, context) {
 	// instrument sources
 	var instrumenter = new istanbul.Instrumenter();
 	var instrumentedSrc = [];
-	context.scripts.src.forEach(function (src) {
+	var filesToInstrument = getRelativeFileList(context.options.filesToInstrument);
+
+	filesToInstrument.forEach(function (src) {
 		var tmpSrc = path.join(context.temp, src);
 		grunt.file.write(tmpSrc, instrumenter.instrumentSync(
 				grunt.file.read(src), src));
 		instrumentedSrc.push(tmpSrc);
 	});
-	context.scripts.src = instrumentedSrc;
+	context.options.filesToInstrument = instrumentedSrc;
+	context.scripts.src = ['main', 'app'];
 	// listen to coverage event dispatched by reporter and write reports
 	var collector = new istanbul.Collector();
 	var coverageJson = context.options.coverage;
